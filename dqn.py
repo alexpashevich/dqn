@@ -1,22 +1,23 @@
 import tensorflow as tf
 import numpy as np
-import random, gym, math
+import random, gym, math, sys, pickle
+from pathlib import Path
 from nn_tf import NeuralNet
-import sys
 
 class Environment:
-	def __init__(self, problem):
+	def __init__(self, problem, max_steps):
 		self.problem = problem
 		self.env = gym.make(problem)
+		self.max_steps = max_steps
 
 
 	def run(self, agent, render=False):
 		# runs one episode
 		s = self.env.reset()
 		R = 0
-		t = 0
+		max_stepsize = 500
 
-		while True:
+		for i in range(self.max_steps):
 			a = agent.act(s)
 			s_, r, done, info = self.env.step(a)
 			if done:
@@ -25,12 +26,9 @@ class Environment:
 			agent.replay()
 			s = s_
 			R += r
-			if render and t%3==0: self.env.render()
-			t += 1
+			if render and i%3==0: self.env.render()
 			if done:
 				break
-
-		print("Total reward = {}".format(R))
 
 
 class Agent:
@@ -42,7 +40,7 @@ class Agent:
 				 max_epsilon=1,
 				 batch_size=64,
 				 hidden_units=64,
-				 learning_rate=0.00025,
+				 learning_rate=0.01,
 				 gamma=0.99,
 				 C=10):
 		self.nb_features = nb_features
@@ -149,15 +147,28 @@ class Memory: # stored as ( s, a, r, s_ )
 
 if __name__ == "__main__":
 	PROBLEM = 'CartPole-v0'
-	env = Environment(PROBLEM)
+	max_steps = 500
+	env = Environment(PROBLEM, max_steps)
 	nb_features = env.env.observation_space.shape[0]
 	nb_actions = env.env.action_space.n
-	nb_steps = 1000
-	iter_printed = int(sys.argv[1])
+	if len(sys.argv) < 3:
+		print("usage: python3 dqn.py <nb_epochs> <iter_printed> [<output_file>]")
+		sys.exit()
+	nb_epochs = int(sys.argv[1])
+	iter_printed = int(sys.argv[2])
 
 	agent = Agent(nb_features, nb_actions)
-	for i in range(nb_steps):
-		env.run(agent, True if i % iter_printed == 0 and iter_printed > 0 else False)
+	rewards = []
+	for i in range(nb_epochs):
+		r = env.run(agent, True if i % iter_printed == 0 and iter_printed > 0 else False)
+		rewards.append(r)
+		print("[{}] Total reward = {}".format(i, r))
+
+
+	if len(sys.argv) > 3:
+		pickle.dump(rewards, Path(sys.argv[3]).open('wb'))
+
+
 
 
 

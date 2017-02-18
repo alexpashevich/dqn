@@ -1,5 +1,6 @@
 import tensorflow as tf
 import math
+import numpy as np
 
 def test1():
 	node1 = tf.constant(3.0, tf.float32)
@@ -125,8 +126,7 @@ class NeuralNet(object):
 
 		self.sess = tf.Session()
 
-		self.observations_target_placeholder = tf.placeholder(tf.float32, shape=(None, self.nb_features), name="observations_target_placeholder")
-		self.q_value_outputs_target, self.target_weights = inference("target", self.observations_target_placeholder, self.nb_features,
+		self.q_value_outputs_target, self.target_weights = inference("target", self.observations_placeholder, self.nb_features,
 																	 self.nb_actions, self.hidden_units)
 
 		init = tf.global_variables_initializer()
@@ -148,7 +148,7 @@ class NeuralNet(object):
 		return outputs
 
 	def predict(self, observations_batch, target=False):
-		if not target:
+		if target is False:
 			outputs = self.sess.run(self.q_value_outputs,
 						  	 		feed_dict={
 						  	  			self.observations_placeholder: observations_batch
@@ -156,15 +156,29 @@ class NeuralNet(object):
 		else:
 			outputs = self.sess.run(self.q_value_outputs_target,
 						  	 		feed_dict={
-						  	  			self.observations_target_placeholder: observations_batch
+						  	  			self.observations_placeholder: observations_batch
 						  			})
 		return outputs
+
+	def test_output(self):
+		observ_rand = np.array([[1,2,3,4], [4,3,2,1], [3,2,4,5]])
+		outputs_1 = self.sess.run(self.q_value_outputs,
+					  	 		feed_dict={
+					  	  			self.observations_placeholder: observ_rand
+					  			})
+		outputs_2 = self.sess.run(self.q_value_outputs_target,
+					  	 		feed_dict={
+					  	  			self.observations_placeholder: observ_rand
+					  			})
+		print("outputs_1.mean() = {}, outputs_2.mean() = {}".format(outputs_1.mean(), outputs_2.mean()))
+
 
 	def update_target(self):
 		for dqn_w, target_w in zip(self.dqn_weights, self.target_weights):
 			copy_w = target_w.assign(dqn_w)
 			self.sess.run(copy_w)
-		# with self.graph_target.as_default() as g:
-			# for w in self.all_weights:
 
-		# tf.assign(self.q_value_outputs_frozen, self.q_value_outputs)
+
+
+
+
