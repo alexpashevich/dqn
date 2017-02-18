@@ -42,8 +42,9 @@ class Agent:
 				 max_epsilon=1,
 				 batch_size=64,
 				 hidden_units=64,
-				 learning_rate=0.01,
-				 gamma=0.99):
+				 learning_rate=0.00025,
+				 gamma=0.99,
+				 C=10):
 		self.nb_features = nb_features
 		self.nb_actions = nb_actions
 		self.min_epsilon = min_epsilon
@@ -51,11 +52,12 @@ class Agent:
 		self.epsilon = max_epsilon
 		self.lmbd = lmbd
 		self.brain = Brain(nb_features, nb_actions, hidden_units, learning_rate)
-		# self.target = self.brain.copy()
 		self.memory = Memory()
 		self.steps = 0
 		self.batch_size = batch_size
 		self.gamma = gamma
+		self.counter = 0
+		self.C = C
 
 
 	def act(self, s):
@@ -80,7 +82,7 @@ class Agent:
 		states = np.array([o[0] for o in batch])
 		states_ = np.array([(no_state if o[3] is None else o[3]) for o in batch])
 		q_s = self.brain.predict(states)
-		q_s_ = self.brain.predict(states_)
+		q_s_ = self.brain.predict(states_, target=False)
 
 		X = np.zeros((len(batch), self.nb_features))
 		y = np.zeros((len(batch), self.nb_actions))
@@ -96,15 +98,19 @@ class Agent:
 			y[i] = target
 
 		self.brain.train(X, y)
+		self.counter += 1
+
+		if self.counter % self.C == 0:
+			self.brain.update_target()
 
 class Brain:
 	def __init__(self, nb_features, nb_actions, hidden_units, learning_rate):
 		self.model = NeuralNet(nb_features, nb_actions, hidden_units, learning_rate)
 
 
-	def predict(self, states):
+	def predict(self, states, target=False):
 		# predicts Q function values for a batch of states
-		return self.model.predict(states)
+		return self.model.predict(states, target)
 
 
 	def predictOne(self, state):
@@ -116,6 +122,10 @@ class Brain:
 	def train(self, states, targets):
 		# performs training step with batch
 		self.model.train_step(states, targets)
+
+	def update_target(self):
+		# update target with copy of current estimation of NN
+		self.model.update_target()
 
 
 class Memory: # stored as ( s, a, r, s_ )
