@@ -1,37 +1,57 @@
 import tensorflow as tf
-import random
 import numpy as np
+import random, gym, math
+from nn_tf import NeuralNet
+import sys
 
 class Environment:
-	def run():
+	def __init__(self, problem):
+		self.problem = problem
+		self.env = gym.make(problem)
+
+
+	def run(self, agent, render=False):
 		# runs one episode
-		s = env.reset()
+		s = self.env.reset()
+		R = 0
+		t = 0
+
 		while True:
 			a = agent.act(s)
-			s_, r, done, info = env.step(a)
-
+			s_, r, done, info = self.env.step(a)
 			if done:
 				s_ = None
-
 			agent.observe((s, a, r, s_))
-			smth_sub_word
 			agent.replay()
-
 			s = s_
-
+			R += r
+			if render and t%3==0: self.env.render()
+			t += 1
 			if done:
 				break
 
+		print("Total reward = {}".format(R))
+
 
 class Agent:
-	def __init__(self, nb_features, nb_actions, lmbd=0.001, min_epsilon=0.01, max_epsilon=1, batch_size=64, gamma=0.99):
+	def __init__(self,
+				 nb_features,
+				 nb_actions,
+				 lmbd=0.001,
+				 min_epsilon=0.01,
+				 max_epsilon=1,
+				 batch_size=64,
+				 hidden_units=64,
+				 learning_rate=0.01,
+				 gamma=0.99):
 		self.nb_features = nb_features
 		self.nb_actions = nb_actions
 		self.min_epsilon = min_epsilon
 		self.max_epsilon = max_epsilon
 		self.epsilon = max_epsilon
 		self.lmbd = lmbd
-		self.brain = Brain()
+		self.brain = Brain(nb_features, nb_actions, hidden_units, learning_rate)
+		# self.target = self.brain.copy()
 		self.memory = Memory()
 		self.steps = 0
 		self.batch_size = batch_size
@@ -40,7 +60,7 @@ class Agent:
 
 	def act(self, s):
 		# decides what action to take in state s
-		if random.random < self.epsilon:
+		if random.random() < self.epsilon:
 			return random.randint(0, self.nb_actions-1)
 		else:
 			return np.argmax(self.brain.predictOne(s))
@@ -65,7 +85,8 @@ class Agent:
 		X = np.zeros((len(batch), self.nb_features))
 		y = np.zeros((len(batch), self.nb_actions))
 
-		for s, a, r, s_ in batch:
+		for i in range(len(batch)):
+			s, a, r, s_ = batch[i]
 			target = q_s[i]
 			if s_ is None:
 				target[a] = r
@@ -77,18 +98,24 @@ class Agent:
 		self.brain.train(X, y)
 
 class Brain:
-	def __init__(self):
-		self.model = ...
+	def __init__(self, nb_features, nb_actions, hidden_units, learning_rate):
+		self.model = NeuralNet(nb_features, nb_actions, hidden_units, learning_rate)
 
 
-	def predict(self, s):
-		# predicts Q function values in state s
-		self.model.predict(s)
+	def predict(self, states):
+		# predicts Q function values for a batch of states
+		return self.model.predict(states)
 
 
-	def train(batch):
+	def predictOne(self, state):
+		# predicts Q function values for one state
+		state = state.reshape(1, -1)
+		return self.model.predict(state)
+
+
+	def train(self, states, targets):
 		# performs training step with batch
-		self.model.fit()
+		self.model.train_step(states, targets)
 
 
 class Memory: # stored as ( s, a, r, s_ )
@@ -108,3 +135,28 @@ class Memory: # stored as ( s, a, r, s_ )
 		# return random batch of n samples
 		n = min(n, len(self.memory_array))
 		return random.sample(self.memory_array, n)
+
+
+if __name__ == "__main__":
+	PROBLEM = 'CartPole-v0'
+	env = Environment(PROBLEM)
+	nb_features = env.env.observation_space.shape[0]
+	nb_actions = env.env.action_space.n
+	nb_steps = 1000
+	iter_printed = int(sys.argv[1])
+
+	agent = Agent(nb_features, nb_actions)
+	for i in range(nb_steps):
+		env.run(agent, True if i % iter_printed == 0 and iter_printed > 0 else False)
+
+
+
+
+
+
+
+
+
+
+
+
