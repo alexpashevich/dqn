@@ -1,6 +1,7 @@
 import tensorflow as tf
 import math
 import numpy as np
+from tensorflow.python import debug as tf_debug
 
 
 def inference(namespace, observations, nb_features, nb_actions, hidden_units):
@@ -43,6 +44,14 @@ def inference(namespace, observations, nb_features, nb_actions, hidden_units):
 	return q_value_outputs, all_weights
 
 
+def clipped_error(x):
+  # Huber loss
+  try:
+    return tf.select(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
+  except:
+    return tf.where(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
+
+
 def loss(q_value_outputs, q_value_targets):
 	""" Calculates the MSE loss from Q value outputs and Q value targets.
 
@@ -53,10 +62,13 @@ def loss(q_value_outputs, q_value_targets):
 	Returns:
 		loss: Loss tensor, float - [batch_size].
 	"""
-	mse = tf.nn.l2_loss(
-		q_value_outputs - q_value_targets,
-		name="mse")
-	return mse
+	# loss_mse = tf.nn.l2_loss(q_value_outputs - q_value_targets, name="mse")
+	# diff = q_value_outputs-q_value_targets
+	# cond = tf.abs(diff) < 1
+	# hubert_loss = tf.where(cond, x=tf.square(diff)/2, y=tf.abs(diff)-1./2, name="hubert_loss")
+	# loss = tf.reduce_sum(hubert_loss)
+	loss = tf.reduce_mean(clipped_error(q_value_targets - q_value_outputs), name='loss')
+	return loss
 
 
 def train(learning_rate, loss):
@@ -99,11 +111,18 @@ class NeuralNet(object):
 		self.sess.run(init)
 
 	def train_step(self, observations_batch, targets_batch):
+		# _, loss_value = self.sess.run([self.train_op, self.loss],
+		# 			  				  feed_dict={
+		# 			      				  self.observations_placeholder: observations_batch,
+		# 			      				  self.q_value_targets: targets_batch
+		# 			      			  })
+		# import pudb; pudb.set_trace()
 		_, loss_value = self.sess.run([self.train_op, self.loss],
 					  				  feed_dict={
 					      				  self.observations_placeholder: observations_batch,
 					      				  self.q_value_targets: targets_batch
 					      			  })
+
 
 
 	def predict(self, observations_batch, target_network=False):

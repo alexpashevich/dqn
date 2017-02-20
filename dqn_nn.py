@@ -43,7 +43,7 @@ class Agent:
                  hidden_units=128,
                  learning_rate=0.000025,
                  gamma=0.99,
-                 C=10000):
+                 C=10000): # 0.000025,
         self.nb_features = nb_features
         self.nb_actions = nb_actions
         self.min_epsilon = min_epsilon
@@ -100,6 +100,7 @@ class Agent:
 
         if self.counter % self.C == 0:
             self.brain.update_target()
+            print("TARGET MODEL UPDATED")
 
         self.counter += 1
 
