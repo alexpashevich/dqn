@@ -2,40 +2,6 @@ import tensorflow as tf
 import math
 import numpy as np
 
-def test1():
-	node1 = tf.constant(3.0, tf.float32)
-	node2 = tf.constant(4.0)
-	print(node1, node2)
-
-	sess = tf.Session()
-	print(sess.run([node1, node2]))
-
-	W = tf.Variable([.3], tf.float32)
-	b = tf.Variable([-.3], tf.float32)
-	x = tf.placeholder(tf.float32)
-	linear_model = W * x + b
-
-	init = tf.global_variables_initializer()
-	sess.run(init)
-
-	print(sess.run(linear_model, {x:[1,2,3,4]}))
-
-	y = tf.placeholder(tf.float32)
-	squared_deltas = tf.square(linear_model - y)
-	loss = tf.reduce_sum(squared_deltas)
-	print(sess.run(loss, {x:[1,2,3,4], y:[0,-1,-2,-3]}))
-
-
-	optimizer = tf.train.GradientDescentOptimizer(0.01)
-	train = optimizer.minimize(loss)
-
-	sess.run(init)
-	for i in range(1000):
-		sess.run(train, {x:[1,2,3,4], y:[0,-1,-2,-3]})
-	# print(sess.run([W, b]))
-	curr_W, curr_b, curr_loss  = sess.run([W, b, loss], {x:[1,2,3,4], y:[0,-1,-2,-3]})
-	print("W: %s b: %s loss: %s"%(curr_W, curr_b, curr_loss))
-
 
 def inference(namespace, observations, nb_features, nb_actions, hidden_units):
 	""" Build a feedforward neural network with 1 hidden layer.
@@ -112,10 +78,10 @@ def train(learning_rate, loss):
 
 class NeuralNet(object):
 	def __init__(self, nb_features, nb_actions, hidden_units, learning_rate):
-		self.nb_features = nb_features # = env.env.observations_space.shape[0]
-		self.nb_actions = nb_actions # = env.env.action_space.n
-		self.hidden_units = hidden_units # = 64
-		self.learning_rate = learning_rate # = 0.01
+		self.nb_features = nb_features
+		self.nb_actions = nb_actions
+		self.hidden_units = hidden_units
+		self.learning_rate = learning_rate
 
 
 		self.observations_placeholder = tf.placeholder(tf.float32, shape=(None, self.nb_features), name="observations_placeholder")
@@ -140,15 +106,8 @@ class NeuralNet(object):
 					      			  })
 
 
-	def predict_target(self, observation):
-		outputs = self.sess.run(self.q_value_outputs,
-					  	 		feed_dict={
-					  	  			self.observations_placeholder: observation
-					  			})
-		return outputs
-
-	def predict(self, observations_batch, target=False):
-		if target is False:
+	def predict(self, observations_batch, target_network=False):
+		if target_network is False:
 			outputs = self.sess.run(self.q_value_outputs,
 						  	 		feed_dict={
 						  	  			self.observations_placeholder: observations_batch
