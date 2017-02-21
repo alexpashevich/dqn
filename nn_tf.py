@@ -62,7 +62,7 @@ def loss(q_value_outputs, q_value_targets):
 	Returns:
 		loss: Loss tensor, float - [batch_size].
 	"""
-	# loss_mse = tf.nn.l2_loss(q_value_outputs - q_value_targets, name="mse")
+	# loss = tf.nn.l2_loss(q_value_outputs - q_value_targets, name="mse")
 	# diff = q_value_outputs-q_value_targets
 	# cond = tf.abs(diff) < 1
 	# hubert_loss = tf.where(cond, x=tf.square(diff)/2, y=tf.abs(diff)-1./2, name="hubert_loss")
@@ -101,13 +101,11 @@ class NeuralNet(object):
 		self.q_value_outputs, self.dqn_weights = inference("dqn", self.observations_placeholder, self.nb_features, self.nb_actions, self.hidden_units)
 		self.loss = loss(self.q_value_outputs, self.q_value_targets)
 		self.train_op = train(self.learning_rate, self.loss)
-
-		self.sess = tf.Session()
-
 		self.q_value_outputs_target, self.target_weights = inference("target", self.observations_placeholder, self.nb_features,
 																	 self.nb_actions, self.hidden_units)
-
 		init = tf.global_variables_initializer()
+		# tf.get_default_graph().finalize()
+		self.sess = tf.Session()
 		self.sess.run(init)
 
 	def train_step(self, observations_batch, targets_batch):

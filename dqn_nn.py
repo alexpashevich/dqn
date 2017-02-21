@@ -15,7 +15,6 @@ class Environment:
         # runs one episode
         s = self.env.reset()
         R = 0
-        max_stepsize = 500
 
         for i in range(self.max_steps):
             a = agent.act(s)
@@ -40,10 +39,10 @@ class Agent:
                  min_epsilon=0.1,
                  max_epsilon=1,
                  batch_size=64,
-                 hidden_units=128,
+                 hidden_units=64,
                  learning_rate=0.000025,
                  gamma=0.99,
-                 C=10000): # 0.000025,
+                 C=1000): # 000025
         self.nb_features = nb_features
         self.nb_actions = nb_actions
         self.min_epsilon = min_epsilon
@@ -55,7 +54,6 @@ class Agent:
         self.steps = 0
         self.batch_size = batch_size
         self.gamma = gamma
-        self.counter = 0
         self.C = C
 
 
@@ -67,6 +65,16 @@ class Agent:
             return np.argmax(self.brain.predictOne(s))
 
     def observe(self, sample):
+        if self.steps % self.C == 0:
+            print("TARGET NETWORK UPDATED")
+            self.brain.update_target()
+
+        if self.steps % 10000 == 0:
+            S = np.array([-0.01335408, -0.04600273, -0.00677248, 0.01517507])
+            pred = agent.brain.predictOne(S)
+            print(pred[0])
+            sys.stdout.flush()
+
         # adds sample (s, a, r, s_) to memory replay
         self.memory.add(sample)
         self.epsilon = self.min_epsilon + (self.max_epsilon - self.min_epsilon) * math.exp(-self.lmbd * self.steps)
@@ -81,7 +89,7 @@ class Agent:
         states = np.array([o[0] for o in batch])
         states_ = np.array([(no_state if o[3] is None else o[3]) for o in batch])
         q_s = self.brain.predict(states)
-        q_s_ = self.brain.predict(states_, target=True)
+        q_s_ = self.brain.predict(states_, target=False)
 
         X = np.zeros((len(batch), self.nb_features))
         y = np.zeros((len(batch), self.nb_actions))
@@ -98,11 +106,23 @@ class Agent:
 
         self.brain.train(X, y)
 
-        if self.counter % self.C == 0:
-            self.brain.update_target()
-            print("TARGET MODEL UPDATED")
 
-        self.counter += 1
+
+
+class RandomAgent:
+    def __init__(self, nb_action):
+        self.nb_action = nb_action
+        self.memory = Memory()
+
+    def act(self, s):
+        return random.randint(0, self.nb_action-1)
+
+    def observe(self, sample):  # in (s, a, r, s_) format
+        self.memory.add(sample)
+
+    def replay(self):
+        pass
+
 
 class Brain:
     def __init__(self, nb_features, nb_actions, hidden_units, learning_rate):
@@ -123,6 +143,7 @@ class Brain:
     def train(self, states, targets):
         # performs training step with batch
         self.model.train_step(states, targets)
+
 
     def update_target(self):
         # update target with copy of current estimation of NN
@@ -148,9 +169,13 @@ class Memory: # stored as ( s, a, r, s_ )
         return random.sample(self.memory_array, n)
 
 
+    def isFull(self):
+        return len(self.memory_array) == self.capacity
+
+
 if __name__ == "__main__":
     PROBLEM = 'CartPole-v0'
-    max_steps = 500
+    max_steps = 10000000000
     env = Environment(PROBLEM, max_steps)
     nb_features = env.env.observation_space.shape[0]
     nb_actions = env.env.action_space.n
@@ -162,6 +187,13 @@ if __name__ == "__main__":
     iter_printed = int(sys.argv[2])
 
     agent = Agent(nb_features, nb_actions)
+    randomAgent = RandomAgent(nb_actions)
+
+    while randomAgent.memory.isFull() == False:
+        env.run(randomAgent)
+
+    agent.memory.memory_array = randomAgent.memory.memory_array
+
     rewards = []
     for i in range(nb_epochs):
         r = env.run(agent, True if i % iter_printed == 0 and iter_printed > 0 else False)
