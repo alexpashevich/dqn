@@ -67,7 +67,7 @@ def loss(q_value_outputs, q_value_targets):
 	# cond = tf.abs(diff) < 1
 	# hubert_loss = tf.where(cond, x=tf.square(diff)/2, y=tf.abs(diff)-1./2, name="hubert_loss")
 	# loss = tf.reduce_sum(hubert_loss)
-	loss = tf.reduce_mean(clipped_error(q_value_targets - q_value_outputs), name='loss')
+	loss = tf.reduce_mean(clipped_error(q_value_targets - q_value_outputs), name='loss') # TODO: change to axis=1
 	return loss
 
 
