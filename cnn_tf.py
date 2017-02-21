@@ -3,6 +3,14 @@ import math
 import numpy as np
 
 
+def clipped_error(x):
+    # Huber loss
+    try:
+        return tf.select(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
+    except:
+        return tf.where(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
+
+
 class ConvNeuralNet(object):
     def __weight_variable(self, shape):
         initial = tf.truncated_normal(shape, stddev=0.1, name="weights")
@@ -96,10 +104,9 @@ class ConvNeuralNet(object):
 
 
     def __loss(self):
-        mse = tf.nn.l2_loss(
-            self.q_value_outputs - self.q_value_targets,
-            name="mse")
-        return mse
+        # loss = tf.nn.l2_loss(self.q_value_outputs - self.q_value_targets, name="mse_loss")
+        loss = tf.reduce_mean(clipped_error(q_value_targets - q_value_outputs), name='hubert_loss', axis=1)
+        return loss
 
 
     def __train(self):
@@ -120,12 +127,10 @@ class ConvNeuralNet(object):
         self.q_value_outputs, self.dqn_weights = self.__inference("dqn", self.observations_placeholder, network_config)
         self.loss = self.__loss()
         self.train_op = self.__train()
-
-        self.sess = tf.Session()
-
         self.q_value_outputs_target, self.target_weights = self.__inference("target", self.observations_placeholder, network_config)
 
         init = tf.global_variables_initializer()
+        self.sess = tf.Session()
         self.sess.run(init)
 
 
@@ -137,8 +142,8 @@ class ConvNeuralNet(object):
                                       })
 
 
-    def predict(self, observations_batch, target=False):
-        if target is False:
+    def predict(self, observations_batch, target_network=False):
+        if target_network is False:
             outputs = self.sess.run(self.q_value_outputs,
                                     feed_dict={
                                         self.observations_placeholder: observations_batch

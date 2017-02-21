@@ -45,11 +45,11 @@ def inference(namespace, observations, nb_features, nb_actions, hidden_units):
 
 
 def clipped_error(x):
-  # Huber loss
-  try:
-    return tf.select(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
-  except:
-    return tf.where(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
+	# Huber loss
+	try:
+		return tf.select(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
+	except:
+		return tf.where(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
 
 
 def loss(q_value_outputs, q_value_targets):
@@ -63,10 +63,6 @@ def loss(q_value_outputs, q_value_targets):
 		loss: Loss tensor, float - [batch_size].
 	"""
 	# loss = tf.nn.l2_loss(q_value_outputs - q_value_targets, name="mse")
-	# diff = q_value_outputs-q_value_targets
-	# cond = tf.abs(diff) < 1
-	# hubert_loss = tf.where(cond, x=tf.square(diff)/2, y=tf.abs(diff)-1./2, name="hubert_loss")
-	# loss = tf.reduce_sum(hubert_loss)
 	loss = tf.reduce_mean(clipped_error(q_value_targets - q_value_outputs), name='loss') # TODO: change to axis=1
 	return loss
 
@@ -109,12 +105,6 @@ class NeuralNet(object):
 		self.sess.run(init)
 
 	def train_step(self, observations_batch, targets_batch):
-		# _, loss_value = self.sess.run([self.train_op, self.loss],
-		# 			  				  feed_dict={
-		# 			      				  self.observations_placeholder: observations_batch,
-		# 			      				  self.q_value_targets: targets_batch
-		# 			      			  })
-		# import pudb; pudb.set_trace()
 		_, loss_value = self.sess.run([self.train_op, self.loss],
 					  				  feed_dict={
 					      				  self.observations_placeholder: observations_batch,

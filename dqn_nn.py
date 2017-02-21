@@ -55,7 +55,7 @@ class Agent:
         self.gamma = GAMMA
 
         self.brain = Brain(nb_features, nb_actions)
-        self.memory = Memory(MEMORY_CAPACITY)
+        self.memory = Memory()
 
 
     def act(self, s):
@@ -69,7 +69,7 @@ class Agent:
     def observe(self, sample):
         if self.steps % self.C == 0:
             print("TARGET NETWORK UPDATED")
-            self.brain.update_target()
+            self.brain.update_target_network()
 
         if self.steps % 10000 == 0:
             S = np.array([8.60847550e-03, -3.64020162e-05, 3.91938297e-02, -2.37661435e-03])
@@ -93,7 +93,7 @@ class Agent:
 
         q_s = self.brain.predict(states)
         q_s_next_target = self.brain.predict(states_, target=True)
-        q_s_next_dqn = self.brain.predict(states_, target=False) # this is needed for DDQN
+        q_s_next_dqn = self.brain.predict(states_, target=False) # this is needed for Double DQN
 
         X = np.zeros((len(batch), self.nb_features))
         y = np.zeros((len(batch), self.nb_actions))
@@ -106,10 +106,9 @@ class Agent:
             if s_ is None:
                 t[a] = r
             else:
-                # DDQN
+                # Double DQN
                 best_action_dqn = np.argmax(q_s_next_dqn[i])
                 t[a] = r + self.gamma * q_s_next_target[i][best_action_dqn]
-                # t[a] = r + self.gamma * np.amax(q_s_[i])
 
             X[i] = s
             y[i] = t
@@ -153,7 +152,7 @@ class Brain:
         self.model.train_step(states, targets)
 
 
-    def update_target(self):
+    def update_target_network(self):
         # update target with copy of current estimation of NN
         self.model.update_target()
 
