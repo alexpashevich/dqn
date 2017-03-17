@@ -12,6 +12,7 @@ MAX_EPSILON = 1
 MIN_EPSILON = 0.01
 LAMBDA = 0.001      # speed of decay
 UPDATE_TARGET_FREQUENCY = 1000
+action_step = 0.1
 
 class Environment:
     def __init__(self, problem, max_steps):
@@ -27,7 +28,7 @@ class Environment:
 
         for i in range(self.max_steps):
             a = agent.act(s)
-            s_, r, done, info = self.env.step(a)
+            s_, r, done, info = self.env.step([a])
             if done:
                 s_ = None
 
@@ -60,10 +61,18 @@ class Agent:
 
     def act(self, s):
         # decides what action to take in state s
+        # if random.random() < self.epsilon:
+        #     return random.randint(0, self.nb_actions-1)
+        # else:
+        #     return np.argmax(self.brain.predictOne(s))
         if random.random() < self.epsilon:
-            return random.randint(0, self.nb_actions-1)
+            action = random.randint(0, self.nb_actions-1)
         else:
-            return np.argmax(self.brain.predictOne(s))
+            action = np.argmax(self.brain.predictOne(s))
+        if action == 0:
+            return action_step
+        else:
+            return -action_step
 
 
     def observe(self, sample):
@@ -122,7 +131,11 @@ class RandomAgent:
         self.memory = Memory()
 
     def act(self, s):
-        return random.randint(0, self.nb_action-1)
+        action = random.randint(0, self.nb_action-1)
+        if action == 0:
+            return action_step
+        else:
+            return -action_step
 
     def observe(self, sample):  # in (s, a, r, s_) format
         self.memory.add(sample)
@@ -176,20 +189,22 @@ class Memory: # stored as ( s, a, r, s_ )
         return random.sample(self.memory_array, n)
 
 
-    def isFull(self):
+    def is_full(self):
         return len(self.memory_array) == self.capacity
 
 
 if __name__ == "__main__":
-    PROBLEM = 'CartPole-v0'
-    max_steps = 10000000000
+    PROBLEM = 'Pendulum-v0' #CartPole-v0
+    max_steps = 10000
     env = Environment(PROBLEM, max_steps)
     nb_features = env.env.observation_space.shape[0]
-    nb_actions = env.env.action_space.n
+    print(type(env.env.action_space))
+    # nb_actions = env.env.action_space.n
+    nb_actions = env.env.action_space.shape[0] * 2
     rewards = []
 
     if len(sys.argv) < 3:
-        print("usage: python3 dqn.py <nb_epochs> <iter_printed> [<output_file>]")
+        print("usage: python3 dqn_nn.py <nb_epochs> <iter_printed> [<output_file>]")
         sys.exit()
     nb_epochs = int(sys.argv[1])
     iter_printed = int(sys.argv[2])
@@ -198,7 +213,7 @@ if __name__ == "__main__":
     randomAgent = RandomAgent(nb_actions)
 
     # explore first with a random agent
-    while randomAgent.memory.isFull() == False:
+    while randomAgent.memory.is_full() == False:
         env.run(randomAgent)
     agent.memory.memory_array = randomAgent.memory.memory_array
 

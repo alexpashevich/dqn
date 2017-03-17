@@ -63,7 +63,7 @@ def loss(q_value_outputs, q_value_targets):
 		loss: Loss tensor, float - [batch_size].
 	"""
 	# loss = tf.nn.l2_loss(q_value_outputs - q_value_targets, name="mse")
-	loss = tf.reduce_mean(clipped_error(q_value_targets - q_value_outputs), name='loss') # TODO: change to axis=1
+	loss = tf.reduce_mean(clipped_error(q_value_targets - q_value_outputs), name='loss', axis=1) # TODO: change to axis=1
 	return loss
 
 
